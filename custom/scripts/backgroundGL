@@ -5,20 +5,24 @@ VIDEO_DEVICE_ID=$(~/.config/hypr/custom/scripts/videoid)
 GLSL_FILES=($(find ~/.config/hypr/shaders/ -name "*.glsl"))
 REFRESH_TIME=300
 
-if [[ -n "$VIDEO_DEVICE_ID" && "$VIDEO_DEVICE_ID" != "" && ($VIDEO_DEVICE_ID == HDMI-* || $VIDEO_DEVICE_ID == DPE-* || $VIDEO_DEVICE_ID == USB-*) ]]
+if pgrep -f "glpaper $VIDEO_DEVICE_ID" > /dev/null
 then
+    pkill -f "glpaper $VIDEO_DEVICE_ID"
+    notify-send --icon=dialog-warning "$USER" "GLSL KILLED ${TIMECODE} " > /dev/null 2>&1
+fi
 
 NEXT_REFRESH=$(( $(date +%s) + $REFRESH_TIME ))
-if pgrep glpaper > /dev/null
-then
-    pkill glpaper
-    notify-send --icon=dialog-warning "$USER" "GLSL Killed " > /dev/null 2>&1
-else
-    notify-send --icon=dialog-warning "$USER" "LETS GLSL " > /dev/null 2>&1
-    glpaper $VIDEO_DEVICE_ID "${GLSL_FILES[${RANDOM:0:1}%${#GLSL_FILES[@]}]}"
-fi
-NEXT_REFRESH=$(( $(date +%s) + $REFRESH_TIME ))
-sleep $(( $NEXT_REFRESH - $(date +%s) ))
+TIMECODE=$(( $(date +%s) / $REFRESH_TIME ))
+notify_file=$(basename "${GLSL_FILES[${RANDOM:0:1}%${#GLSL_FILES[@]}]}" .glsl)
+notify_file="${notify_file##*/}"
+notify-send --icon=dialog-warning "$USER" "LETS GLSL $(date -u -d @${TIMECODE} '+%H:%M:%S') ${notify_file}" > /dev/null 2>&1
+
+while [ $(date +%s) -lt $NEXT_REFRESH ]
+do
+    glpaper $VIDEO_DEVICE_ID "${GLSL_FILES[${RANDOM:0:1}%${#GLSL_FILES[@]}]}" &
+    sleep $REFRESH_TIME
+done
+
 
 else
     notify-send --icon=dialog-warning "$USER" "Erreur : la valeur stockée dans ~/.config/hypr/custom/scripts/videoid n'est pas un entier" > /dev/null 2>&1
