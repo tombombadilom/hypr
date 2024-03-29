@@ -3,7 +3,7 @@ OS=$(uname -s)
 
 VIDEO_DEVICE_ID=$(~/.config/hypr/custom/scripts/videoid)
 GLSL_FILES=($(find ~/.config/hypr/shaders/ -name "*.glsl"))
-REFRESH_TIME=300
+REFRESH_TIME=30
 
 if pgrep -f "glpaper $VIDEO_DEVICE_ID" > /dev/null
 then
