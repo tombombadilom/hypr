@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+OS=$(uname -s)
+
+VIDEO_DEVICE_ID=$(~/.config/hypr/custom/scripts/videoid)
+GLSL_FILES=($(find ~/.config/hypr/shaders/ -name "*.glsl"))
+REFRESH_TIME=300
+
+if [[ -n "$VIDEO_DEVICE_ID" && "$VIDEO_DEVICE_ID" != "" && ($VIDEO_DEVICE_ID == HDMI-* || $VIDEO_DEVICE_ID == DPE-* || $VIDEO_DEVICE_ID == USB-*) ]]
+then
+
+NEXT_REFRESH=$(( $(date +%s) + $REFRESH_TIME ))
+if pgrep glpaper > /dev/null
+then
+    pkill glpaper
+    notify-send --icon=dialog-warning "$USER" "GLSL Killed " > /dev/null 2>&1
+else
+    notify-send --icon=dialog-warning "$USER" "LETS GLSL " > /dev/null 2>&1
+    glpaper $VIDEO_DEVICE_ID "${GLSL_FILES[${RANDOM:0:1}%${#GLSL_FILES[@]}]}"
+fi
+NEXT_REFRESH=$(( $(date +%s) + $REFRESH_TIME ))
+sleep $(( $NEXT_REFRESH - $(date +%s) ))
+
+else
+    notify-send --icon=dialog-warning "$USER" "Erreur : la valeur stockée dans ~/.config/hypr/custom/scripts/videoid n'est pas un entier" > /dev/null 2>&1
+ 
+    if [[ $VIDEO_DEVICE_ID =~ ^[0-9]+$ ]]
+    then
+        echo $VIDEO_DEVICE_ID > ~/.config/hypr/custom/scripts/videoid
+        glpaper $VIDEO_DEVICE_ID ~/.config/hypr/shaders/hg.glsl
+    else
+        notify-send --icon=dialog-warning "$USER" "Impossible de récupérer l'ID du VIDEO DEVICE" > /dev/null 2>&1
+    fi
+fi
+
+
+
+

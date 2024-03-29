@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Save the ID of the monitor where the GL background is displayed
+VIDEOID=$(hyprctl monitors | grep -oP '(?<=Monitor )\K\S+' | head -n1)
+[ "$VIDEOID" ] && echo "$VIDEOID" 
+
