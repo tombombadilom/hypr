@@ -7,7 +7,7 @@ if ! command -v glpaper &> /dev/null; then
     exit 1
 fi
 
-# Répertoire contenant les fichiers GLSL
+# Directory containing GLSL files
 GLSL_DIR="$HOME/.config/hypr/shaders/glsl/"
 
 # Ensure GLSL_DIR exists
@@ -15,38 +15,44 @@ if [ ! -d "$GLSL_DIR" ]; then
     echo "GLSL directory does not exist: $GLSL_DIR"
     exit 1
 fi
-sanitize_path() {
-    echo "$1" | tr -s '/'
-}
-GLSL_FILES=($(ls "$(sanitize_path "$GLSL_DIR")"/*.glsl))
-CURRENT_INDEX=0 # Index pour le fichier GLSL actuel
-VIDEO_DEVICE_ID=$("$HOME"/.config/hypr/custom/scripts/videoid)
+
+shopt -s nullglob
+GLSL_FILES=("$GLSL_DIR"*.glsl)
+
+CURRENT_INDEX=0 # Index for the current GLSL file
+VIDEO_DEVICE_ID=$("$HOME/.config/hypr/custom/scripts/videoid") # Quoted properly
 
 # Directory for PID file
 PID_DIR="$HOME/.local/run/glpaper"
 mkdir -p "$PID_DIR"
+# File to store the current index
+INDEX_FILE="$PID_DIR/current_index.pid"
 
-# Durée de rafraîchissement pour changer le GLSL
-REFRESH_TIME=60  # par exemple, ajustez selon vos besoins
+# Read the current index from the file if it exists, otherwise start at 0
+if [ -f "$INDEX_FILE" ]; then
+    CURRENT_INDEX=$(<"$INDEX_FILE") # Quoted command substitution
+else
+    CURRENT_INDEX=0
+fi
 
-# Unique ID pour remplacer les notifications précédentes.
-NOTIFY_ID="9999"
+# Refresh duration to change the GLSL
+REFRESH_TIME=60  # For example, adjust according to your needs
 
-# Wrapper pour la commande notify-send avec des arguments prédéfinis
+# Wrapper for the notify-send command with predefined arguments
 notify_send_wrapper() {
     local title="$1"
     local message="$2"
     if command -v notify-send &> /dev/null; then
-        # Timeout de 10000 millisecondes (10 secondes) et marqueur transient pour remplacer les anciennes notifications.
-        notify-send -t 10000 -u low -h int:transient:1 --replace="$NOTIFY_ID" "$title" "$message"
+        notify-send -t 10000 -u low -h int:transient:1 "$title" "$message"
     else
         echo "$title: $message"
     fi
 }
-start_glpaper() {
-    kill_glpaper  # Assurez-vous que l'instance existante est arrêtée avant de commencer
 
-    notify_send_wrapper "Démarrage" "GLpaper est en cours de démarrage."
+start_glpaper() {
+    kill_glpaper  # Ensure that the existing instance is stopped before starting
+
+    notify_send_wrapper "Starting" "GLpaper is starting up."
 
     # Start glpaper and capture the PID
     glpaper "$VIDEO_DEVICE_ID" "${GLSL_FILES[$CURRENT_INDEX]}" &
@@ -56,85 +62,70 @@ start_glpaper() {
 
 # Function to start the background loop
 start_refresh_loop() {
-    kill_refresh_loop  # Assurez-vous que la boucle existante est arrêtée avant de commencer
+    kill_refresh_loop  # Ensure that the existing loop is stopped before starting
     while true; do
         sleep "$REFRESH_TIME"
         next_glsl
     done &
     REFRESH_LOOP_PID=$!
-    echo "$REFRESH_LOOP_PID" > "$PID_DIR/refresh_loop.pid"  # Sauvegardez le PID de la boucle principale
+    echo "$REFRESH_LOOP_PID" > "$PID_DIR/refresh_loop.pid"
 }
-# Tuer l'instance actuelle de glpaper
+
+# Kill the current instance of glpaper
 kill_glpaper() {
-    # Try to get the PID of GLpaper using pgrep and the name of the GLpaper process
-    GLPAPER_PID=$(pgrep glpaper)
-
-    # If the PID was found (pgrep returned something)
-    if [ -n "$GLPAPER_PID" ]; then
-        # Kill the GLpaper process
-        kill "$GLPAPER_PID"
-        
-        # Send a notification that GLpaper has been stopped
-        notify_send_wrapper "Arrêt" "GLpaper a été arrêté."
-    else
-        # Send a notification that GLpaper was not found/running
-        notify_send_wrapper "Pas trouvé" "GLpaper n'est pas en cours d'exécution."
-    fi
-}
-
-
-# Tuer la boucle de rafraîchissement s'il existe
-kill_refresh_loop() {
-    if [ -f "$PID_DIR/refresh_loop.pid" ]; then
-        REFRESH_LOOP_PID=$(<"$PID_DIR/refresh_loop.pid")
-        if kill -0 "$REFRESH_LOOP_PID" 2>/dev/null; then
-            kill "$REFRESH_LOOP_PID"
-            rm "$PID_DIR/refresh_loop.pid"
-            notify_send_wrapper "Arrêt" "La boucle de rafraîchissement GLpaper a été arrêtée."
+    if [ -f "$PID_DIR/glpaper.pid" ]; then
+        GLPAPER_PID=$(<"$PID_DIR/glpaper.pid")
+        if kill -0 "$GLPAPER_PID" 2>/dev/null; then
+            kill "$GLPAPER_PID" && wait "$GLPAPER_PID" 2>/dev/null
+            rm "$PID_DIR/glpaper.pid"
+            notify_send_wrapper "Stopping" "GLpaper has been stopped."
+        else
+            notify_send_wrapper "Not found" "GLpaper is not running."
         fi
     fi
 }
 
-# File to store the current index
-INDEX_FILE="$PID_DIR/current_index.pid"
+# Kill the refresh loop if it exists
+kill_refresh_loop() {
+    if [ -f "$PID_DIR/refresh_loop.pid" ]; then
+        REFRESH_LOOP_PID=$(<"$PID_DIR/refresh_loop.pid")
+        if kill -0 "$REFRESH_LOOP_PID" 2>/dev/null; then
+            kill "$REFRESH_LOOP_PID" && wait "$REFRESH_LOOP_PID" 2>/dev/null
+            rm "$PID_DIR/refresh_loop.pid"
+            notify_send_wrapper "Stopping" "The GLpaper refresh loop has been stopped."
+        fi
+    fi
+}
 
-# Read the current index from the file if it exists, otherwise start at 0
-if [ -f "$INDEX_FILE" ]; then
-    CURRENT_INDEX=$(<"$INDEX_FILE")
-else
-    CURRENT_INDEX=0
-fi
-
-# Incrémenter l'index et boucler si nécessaire
+# Increment the index and loop if necessary
 next_glsl() {
     kill_glpaper
-    # Utiliser le modulo pour revenir à 0 après le dernier index
     CURRENT_INDEX=$(( (CURRENT_INDEX+1) % ${#GLSL_FILES[@]} ))
     echo "$CURRENT_INDEX" > "$INDEX_FILE"
-    start_glpaper && notify_send_wrapper "Changement" "Passage au GLSL suivant."
+    start_glpaper && notify_send_wrapper "Change" "Switching to the next GLSL."
 }
 
-# Décrémenter l'index et boucler si nécessaire
+# Decrement the index and loop if necessary
 prev_glsl() {
     kill_glpaper
-    # Vérifier si nous sommes au premier index et boucler au dernier index si c'est le cas
     if [ "$CURRENT_INDEX" -eq 0 ]; then
-        CURRENT_INDEX=${#GLSL_FILES[@]}
+        CURRENT_INDEX=$(( ${#GLSL_FILES[@]} - 1 ))
+    else
+        CURRENT_INDEX=$((CURRENT_INDEX-1))
     fi
-    CURRENT_INDEX=$((CURRENT_INDEX-1))
     echo "$CURRENT_INDEX" > "$INDEX_FILE"
-    start_glpaper && notify_send_wrapper "Changement" "Retour au GLSL précédent."
+    start_glpaper && notify_send_wrapper "Change" "Returning to the previous GLSL."
 }
 
-export CURRENT_INDEX
-# Votre script bgDaemon peut alors être utilisé comme suit:
+# Your bgDaemon script can then be used as follows:
 case "$1" in
     start)
         start_glpaper
-         start_refresh_loop
+        start_refresh_loop
         ;;
     stop)
         kill_glpaper
+        kill_refresh_loop
         ;;
     next)
         next_glsl
@@ -143,7 +134,9 @@ case "$1" in
         prev_glsl
         ;;
     *)
-        # ne lance aucune séquence
+        echo "Unknown command: $1"
+        echo "Usage: $0 {start|stop|next|prev}"
+        #exit 1
         ;;
 esac
 
