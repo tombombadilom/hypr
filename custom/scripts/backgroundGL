@@ -1,41 +1,43 @@
-#!/usr/bin/env bash
-OS=$(uname -s)
+#!/bin/bash
 
-VIDEO_DEVICE_ID=$(~/.config/hypr/custom/scripts/videoid)
-GLSL_FILES=($(find ~/.config/hypr/shaders/ -name "*.glsl"))
-REFRESH_TIME=30
+# Chemin vers le script bgDaemon
+BGDAEMON_PATH=~/.local/bin/glpaper/bgDaemon
 
-if pgrep -f "glpaper $VIDEO_DEVICE_ID" > /dev/null
-then
-    pkill -f "glpaper $VIDEO_DEVICE_ID"
-    notify-send --icon=dialog-warning "$USER" "GLSL KILLED ${TIMECODE} " > /dev/null 2>&1
-fi
+# Fonction pour envoyer les commandes à bgDaemon
+send_command_to_bgdaemon() {
+  "$BGDAEMON_PATH" "$@"
+}
 
-NEXT_REFRESH=$(( $(date +%s) + $REFRESH_TIME ))
-TIMECODE=$(( $(date +%s) / $REFRESH_TIME ))
-notify_file=$(basename "${GLSL_FILES[${RANDOM:0:1}%${#GLSL_FILES[@]}]}" .glsl)
-notify_file="${notify_file##*/}"
-notify-send --icon=dialog-warning "$USER" "LETS GLSL $(date -u -d @${TIMECODE} '+%H:%M:%S') ${notify_file}" > /dev/null 2>&1
-
-while [ $(date +%s) -lt $NEXT_REFRESH ]
-do
-    glpaper $VIDEO_DEVICE_ID "${GLSL_FILES[${RANDOM:0:1}%${#GLSL_FILES[@]}]}" &
-    sleep $REFRESH_TIME
-done
-
-
+# Vérifier les conditions et agir en conséquent
+if ! pgrep glpaper > /dev/null; then
+  # Aucun processus glpaper n'est actuellement en cours d'exécution,
+  # donc on démarre un nouveau processus.
+  if [[ -z "$1" ]]; then
+    snd-notify 'Glpaper' 'Aucune sequence n''est en cours de lecture'
+  else
+    send_command_to_bgdaemon start
+  fi
+elif [[ -n "$1" ]]; then
+  case "$1" in
+    next)
+      # Navigation vers le GLSL suivant
+      send_command_to_bgdaemon next
+      ;;
+    prev)
+      # Navigation vers le GLSL précédent
+      send_command_to_bgdaemon prev
+      ;;
+    *)
+      echo "Option invalide: $1"
+      exit 1
+      ;;
+  esac
 else
-    notify-send --icon=dialog-warning "$USER" "Erreur : la valeur stockée dans ~/.config/hypr/custom/scripts/videoid n'est pas un entier" > /dev/null 2>&1
- 
-    if [[ $VIDEO_DEVICE_ID =~ ^[0-9]+$ ]]
-    then
-        echo $VIDEO_DEVICE_ID > ~/.config/hypr/custom/scripts/videoid
-        glpaper $VIDEO_DEVICE_ID ~/.config/hypr/shaders/hg.glsl
-    else
-        notify-send --icon=dialog-warning "$USER" "Impossible de récupérer l'ID du VIDEO DEVICE" > /dev/null 2>&1
-    fi
+  # Un processus glpaper est en cours d'exécution et aucune navigation n'est demandée,
+  # on arrête donc le processus et on termine backgroundGL.
+  send_command_to_bgdaemon stop
+  pkill -f backgroundGL
 fi
 
-
-
+exit 0
 

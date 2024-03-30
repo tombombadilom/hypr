@@ -1,0 +1,35 @@
+# install
+##  Créez l'utilisateur 'glpaper' sans un répertoire home
+```bash
+sudo useradd -M glpaper
+```
+## Ajoutez l'utilisateur 'tom' au groupe 'video'
+```bash
+sudo usermod -aG video tom
+```
+# créer le repertoire glpaper pour les exec
+```bash
+sudo mkdir -p $HOME/.local/bin/glpaper
+sudo mkdir -p $HOME/.local/run/glpaper
+sudo cp $HOME/.config/hypr/custom/scripts/background/bgDaemon $HOME/.local/bin/glpaper/.
+sudo chown -R tom:video $HOME/.local/bin/glpaper
+sudo chown -R tom:video $HOME/.local/run/glpaper
+sudo chmod -R 777 $HOME/.local/bin/glpaper
+sudo chmod -R 777 $HOME/.local/run/glpaper
+sudo chmod +w+x $HOME/.local/bin/glpaper/bgDaemon
+```
+## Installez les daemon et services dans systemd
+```bash
+sudo cp $HOME/.config/hypr/custom/scripts/background/bgDaemon.service /etc/systemd/system/.
+```
+## Activez les daemons
+```bash 
+
+sudo systemctl disable bgDaemon
+sudo systemctl daemon-reload
+sudo systemctl enable bgDaemon.service && sudo systemctl start bgDaemon.service
+sudo systemctl status bgDaemon
+sudo journalctl -u bgDaemon
+
+
+```

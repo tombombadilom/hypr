@@ -1,0 +1,15 @@
+[Unit]
+Description=Background GL Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=tom
+Group=video
+ExecStart=/home/tom/.local/bin/glpaper/bgDaemon
+PIDFile=/home/tom/.local/run/glpaper/bgDaemon.pid
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
