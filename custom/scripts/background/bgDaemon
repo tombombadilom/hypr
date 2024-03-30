@@ -46,8 +46,9 @@ notify_send_wrapper() {
 
 # Commande pour démarrer glpaper
 # Commande pour démarrer glpaper
+# Commande pour démarrer glpaper
 start_glpaper() {
-    kill_refresh_loop  # Assurez-vous que la boucle existante est arrêtée avant de commencer
+    kill_glpaper  # Assurez-vous que l'instance existante est arrêtée avant de commencer
 
     notify_send_wrapper "Démarrage" "GLpaper est en cours de démarrage."
 
@@ -55,22 +56,37 @@ start_glpaper() {
     glpaper "$VIDEO_DEVICE_ID" "${GLSL_FILES[$CURRENT_INDEX]}" &
     GLPAPER_PID=$!
     echo "$GLPAPER_PID" > "$PID_DIR/glpaper.pid"
+}
 
-    # Background loop to update GLSL
+# Function to start the background loop
+start_refresh_loop() {
+    kill_refresh_loop  # Assurez-vous que la boucle existante est arrêtée avant de commencer
     while true; do
         sleep "$REFRESH_TIME"
         next_glsl
     done &
-    echo $! > "$PID_DIR/refresh.pid"  # Sauvegardez le PID de la boucle de rafraîchissement
+    REFRESH_LOOP_PID=$!
+    echo "$REFRESH_LOOP_PID" > "$PID_DIR/refresh_loop.pid"  # Sauvegardez le PID de la boucle principale
+}
+# Tuer l'instance actuelle de glpaper
+kill_glpaper() {
+    if [ -f "$PID_DIR/glpaper.pid" ]; then
+        GLPAPER_PID=$(<"$PID_DIR/glpaper.pid")
+        if kill -0 "$GLPAPER_PID" 2>/dev/null; then
+            kill "$GLPAPER_PID"
+            rm "$PID_DIR/glpaper.pid"
+            notify_send_wrapper "Arrêt" "GLpaper a été arrêté."
+        fi
+    fi
 }
 
 # Tuer la boucle de rafraîchissement s'il existe
 kill_refresh_loop() {
-    if [ -f "$PID_DIR/refresh.pid" ]; then
-        REFRESH_PID=$(<"$PID_DIR/refresh.pid")
-        if kill -0 "$REFRESH_PID" 2>/dev/null; then
-            kill "$REFRESH_PID"
-            rm "$PID_DIR/refresh.pid"
+    if [ -f "$PID_DIR/refresh_loop.pid" ]; then
+        REFRESH_LOOP_PID=$(<"$PID_DIR/refresh_loop.pid")
+        if kill -0 "$REFRESH_LOOP_PID" 2>/dev/null; then
+            kill "$REFRESH_LOOP_PID"
+            rm "$PID_DIR/refresh_loop.pid"
             notify_send_wrapper "Arrêt" "La boucle de rafraîchissement GLpaper a été arrêtée."
         fi
     fi
@@ -95,6 +111,7 @@ prev_glsl() {
 case "$1" in
     start)
         start_glpaper
+         start_refresh_loop
         ;;
     stop)
         kill_glpaper
