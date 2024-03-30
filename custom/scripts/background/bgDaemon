@@ -43,10 +43,6 @@ notify_send_wrapper() {
         echo "$title: $message"
     fi
 }
-
-# Commande pour démarrer glpaper
-# Commande pour démarrer glpaper
-# Commande pour démarrer glpaper
 start_glpaper() {
     kill_glpaper  # Assurez-vous que l'instance existante est arrêtée avant de commencer
 
@@ -70,15 +66,22 @@ start_refresh_loop() {
 }
 # Tuer l'instance actuelle de glpaper
 kill_glpaper() {
-    if [ -f "$PID_DIR/glpaper.pid" ]; then
-        GLPAPER_PID=$(<"$PID_DIR/glpaper.pid")
-        if kill -0 "$GLPAPER_PID" 2>/dev/null; then
-            kill "$GLPAPER_PID"
-            rm "$PID_DIR/glpaper.pid"
-            notify_send_wrapper "Arrêt" "GLpaper a été arrêté."
-        fi
+    # Try to get the PID of GLpaper using pgrep and the name of the GLpaper process
+    GLPAPER_PID=$(pgrep glpaper)
+
+    # If the PID was found (pgrep returned something)
+    if [ -n "$GLPAPER_PID" ]; then
+        # Kill the GLpaper process
+        kill "$GLPAPER_PID"
+        
+        # Send a notification that GLpaper has been stopped
+        notify_send_wrapper "Arrêt" "GLpaper a été arrêté."
+    else
+        # Send a notification that GLpaper was not found/running
+        notify_send_wrapper "Pas trouvé" "GLpaper n'est pas en cours d'exécution."
     fi
 }
+
 
 # Tuer la boucle de rafraîchissement s'il existe
 kill_refresh_loop() {
@@ -92,21 +95,38 @@ kill_refresh_loop() {
     fi
 }
 
+# File to store the current index
+INDEX_FILE="$PID_DIR/current_index.pid"
 
-# Passer au GLSL suivant
+# Read the current index from the file if it exists, otherwise start at 0
+if [ -f "$INDEX_FILE" ]; then
+    CURRENT_INDEX=$(<"$INDEX_FILE")
+else
+    CURRENT_INDEX=0
+fi
+
+# Incrémenter l'index et boucler si nécessaire
 next_glsl() {
     kill_glpaper
+    # Utiliser le modulo pour revenir à 0 après le dernier index
     CURRENT_INDEX=$(( (CURRENT_INDEX+1) % ${#GLSL_FILES[@]} ))
+    echo "$CURRENT_INDEX" > "$INDEX_FILE"
     start_glpaper && notify_send_wrapper "Changement" "Passage au GLSL suivant."
 }
 
-# Passer au GLSL précédent
+# Décrémenter l'index et boucler si nécessaire
 prev_glsl() {
     kill_glpaper
-    CURRENT_INDEX=$(( (CURRENT_INDEX-1+${#GLSL_FILES[@]}) % ${#GLSL_FILES[@]} ))
+    # Vérifier si nous sommes au premier index et boucler au dernier index si c'est le cas
+    if [ "$CURRENT_INDEX" -eq 0 ]; then
+        CURRENT_INDEX=${#GLSL_FILES[@]}
+    fi
+    CURRENT_INDEX=$((CURRENT_INDEX-1))
+    echo "$CURRENT_INDEX" > "$INDEX_FILE"
     start_glpaper && notify_send_wrapper "Changement" "Retour au GLSL précédent."
 }
 
+export CURRENT_INDEX
 # Votre script bgDaemon peut alors être utilisé comme suit:
 case "$1" in
     start)
