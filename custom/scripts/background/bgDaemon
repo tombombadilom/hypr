@@ -15,8 +15,10 @@ if [ ! -d "$GLSL_DIR" ]; then
     echo "GLSL directory does not exist: $GLSL_DIR"
     exit 1
 fi
-
-GLSL_FILES=($(ls "$GLSL_DIR"/*.glsl))
+sanitize_path() {
+    echo "$1" | tr -s '/'
+}
+GLSL_FILES=($(ls "$(sanitize_path "$GLSL_DIR")"/*.glsl))
 CURRENT_INDEX=0 # Index pour le fichier GLSL actuel
 VIDEO_DEVICE_ID=$("$HOME"/.config/hypr/custom/scripts/videoid)
 
@@ -43,39 +45,37 @@ notify_send_wrapper() {
 }
 
 # Commande pour démarrer glpaper
+# Commande pour démarrer glpaper
 start_glpaper() {
+    kill_refresh_loop  # Assurez-vous que la boucle existante est arrêtée avant de commencer
+
     notify_send_wrapper "Démarrage" "GLpaper est en cours de démarrage."
 
     # Start glpaper and capture the PID
     glpaper "$VIDEO_DEVICE_ID" "${GLSL_FILES[$CURRENT_INDEX]}" &
     GLPAPER_PID=$!
-    echo "$GLPAPER_PID" > "$GLPAPER_PID_FILE"
-
-    # Verify that glpaper has started successfully
-    if ! kill -0 "$GLPAPER_PID" 2>/dev/null; then
-        notify_send_wrapper "Erreur" "Impossible de démarrer glpaper."
-        return 1
-    fi
+    echo "$GLPAPER_PID" > "$PID_DIR/glpaper.pid"
 
     # Background loop to update GLSL
     while true; do
         sleep "$REFRESH_TIME"
         next_glsl
     done &
+    echo $! > "$PID_DIR/refresh.pid"  # Sauvegardez le PID de la boucle de rafraîchissement
 }
 
-# Tuer le processus de glpaper s'il existe
-kill_glpaper() {
-    if [ -f "$GLPAPER_PID_FILE" ]; then
-        pid=$(<"$GLPAPER_PID_FILE")
-        if kill -0 "$pid" 2>/dev/null; then
-            kill "$pid" && rm "$GLPAPER_PID_FILE"
-            notify_send_wrapper "Arrêt" "GLpaper a été arrêté."
-        else
-            echo "Process ID [$pid] not found."
+# Tuer la boucle de rafraîchissement s'il existe
+kill_refresh_loop() {
+    if [ -f "$PID_DIR/refresh.pid" ]; then
+        REFRESH_PID=$(<"$PID_DIR/refresh.pid")
+        if kill -0 "$REFRESH_PID" 2>/dev/null; then
+            kill "$REFRESH_PID"
+            rm "$PID_DIR/refresh.pid"
+            notify_send_wrapper "Arrêt" "La boucle de rafraîchissement GLpaper a été arrêtée."
         fi
     fi
 }
+
 
 # Passer au GLSL suivant
 next_glsl() {
