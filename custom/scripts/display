@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# Command to get monitor information
+monitor_info="$(hyprctl monitors)"
+
+# Parse monitor name, resolution, and refresh rate from the monitor info
+monitor_name="$(echo "$monitor_info" | awk '/Monitor/ {print $2}')"
+resolution_at_refresh="$(echo "$monitor_info" | awk '/3840x2160@60/ {print $1}')"
+
+# Extract only the integer part of the refresh rate for consistency
+refresh_rate="$(echo $resolution_at_refresh | cut -d'@' -f2 | cut -d'.' -f1)"
+
+# Create the desired output format
+output="${monitor_name},${resolution_at_refresh%@*}@${refresh_rate},0x0,1"
+
+# Display the formatted output
+echo "$output"
