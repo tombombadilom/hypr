@@ -126,14 +126,23 @@ kill_glpaper() {
 		if [ -f "$PID_DIR/glpaper.pid" ]; then
 				GLPAPER_PID=$(<"$PID_DIR/glpaper.pid")
 				if kill -0 "$GLPAPER_PID" 2>/dev/null; then
-						kill "$GLPAPER_PID" && wait "$GLPAPER_PID" 2>/dev/null
-						rm "$PID_DIR/glpaper.pid"
-						notify_send_wrapper "Stopping" "GLpaper has been stopped." "Notice"
+						if kill "$GLPAPER_PID"; then
+								# Ajoutez une petite pause pour s'assurer que le processus est bien tué.
+								sleep 1
+								while kill -0 "$GLPAPER_PID" 2>/dev/null; do
+										sleep 1
+								done
+								rm "$PID_DIR/glpaper.pid"
+								if $DEBUG; then
+									notify_send_wrapper "Stopping" "GLpaper has been stopped." "Notice"
+								fi
+						fi
 				else
 						notify_send_wrapper "Not found" "GLpaper is not running." "Error"
 				fi
 		fi
 }
+
 
 # Kill the refresh loop if it exists
 kill_refresh_loop() {
