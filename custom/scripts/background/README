@@ -24,7 +24,7 @@ sudo cp $HOME/.config/hypr/custom/scripts/background/bgDaemon.service /etc/syste
 ```
 ## Activez les daemons
 ```bash 
-
+sudo systemctl restart bgDaemon
 sudo systemctl disable bgDaemon
 sudo systemctl daemon-reload
 sudo systemctl enable bgDaemon.service && sudo systemctl start bgDaemon.service

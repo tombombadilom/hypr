@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # ~/.local/bin/glpaper/bgDaemon
 
+# Boolean variable to control the verbosity of notification sending.
+DEBUG=false
+
 # Check dependencies
 if ! command -v glpaper &> /dev/null; then
-    echo "The 'glpaper' program is not installed."
-    exit 1
+		echo "The 'glpaper' program is not installed."
+		exit 1
 fi
 
 # Directory containing GLSL files
@@ -12,8 +15,8 @@ GLSL_DIR="$HOME/.config/hypr/shaders/glsl/"
 
 # Ensure GLSL_DIR exists
 if [ ! -d "$GLSL_DIR" ]; then
-    echo "GLSL directory does not exist: $GLSL_DIR"
-    exit 1
+		echo "GLSL directory does not exist: $GLSL_DIR"
+		exit 1
 fi
 
 shopt -s nullglob
@@ -30,114 +33,176 @@ INDEX_FILE="$PID_DIR/current_index.pid"
 
 # Read the current index from the file if it exists, otherwise start at 0
 if [ -f "$INDEX_FILE" ]; then
-    CURRENT_INDEX=$(<"$INDEX_FILE") # Quoted command substitution
+		CURRENT_INDEX=$(<"$INDEX_FILE") # Quoted command substitution
 else
-    CURRENT_INDEX=0
+		CURRENT_INDEX=0
 fi
 
 # Refresh duration to change the GLSL
 REFRESH_TIME=60  # For example, adjust according to your needs
 
 # Wrapper for the notify-send command with predefined arguments
+# Wrapper for the notify-send command with predefined arguments and notification types
 notify_send_wrapper() {
-    local title="$1"
-    local message="$2"
-    if command -v notify-send &> /dev/null; then
-        notify-send -t 10000 -u low -h int:transient:1 "$title" "$message"
-    else
-        echo "$title: $message"
-    fi
+		local title="$1"
+		local message="$2"
+		local notify_type="$3" # New parameter for the type of notification
+		local urgency="low"
+		local timeout=10000
+		local icon="" # Variable to store the path to the notification icon
+
+		# Set icon and urgency based on the notification type
+		case "$notify_type" in
+				Alarm)
+						icon="dialog-error" # Replace with actual path to your alarm icon if needed
+						urgency="critical"
+						;;
+				Notice)
+						icon="dialog-information" # Replace with actual path to notice icon if needed
+						;;
+				Success)
+						icon="dialog-ok" # Replace with actual path to success icon if needed
+						;;
+				Error)
+						icon="dialog-error" # Replace with actual path to error icon if needed
+						urgency="critical"
+						;;
+				*)
+						icon="dialog-information" # Default icon
+						;;
+		esac
+
+		# Adjust settings when debugging
+		if $DEBUG; then
+				urgency="normal"   # Increase urgency when debugging
+				timeout=20000      # Increase the time notifications are displayed when debugging
+		fi
+
+		if command -v notify-send &> /dev/null; then
+				notify-send -t "$timeout" -u "$urgency" -i "$icon" -h int:transient:1 "$title" "$message"
+		else
+				echo "$title: $message"
+		fi
 }
 
+# Usage example:
+# notify_send_wrapper "Title here" "Message here" "Notice"
+
+
 start_glpaper() {
-    kill_glpaper  # Ensure that the existing instance is stopped before starting
+		kill_glpaper  # Ensure that the existing instance is stopped before starting
 
-    notify_send_wrapper "Starting" "GLpaper is starting up."
-
-    # Start glpaper and capture the PID
-    glpaper "$VIDEO_DEVICE_ID" "${GLSL_FILES[$CURRENT_INDEX]}" &
-    GLPAPER_PID=$!
-    echo "$GLPAPER_PID" > "$PID_DIR/glpaper.pid"
+		if $DEBUG; then
+				notify_send_wrapper "Starting" "GLpaper is starting up." "Success"
+		fi
+		# Start glpaper and capture the PID
+		glpaper "$VIDEO_DEVICE_ID" "${GLSL_FILES[$CURRENT_INDEX]}" &
+		GLPAPER_PID=$!
+		echo "$GLPAPER_PID" > "$PID_DIR/glpaper.pid"
+		# Use parameter expansion to get the filename without the path
+    FULL_FILENAME="${GLSL_FILES[$CURRENT_INDEX]}"
+    FILENAME_WITHOUT_PATH="${FULL_FILENAME##*/}"
+    
+    # Now remove the extension from the filename
+    FILENAME_WITHOUT_EXTENSION="${FILENAME_WITHOUT_PATH%.*}"
+    
+    # Call the `notify_send_wrapper` with just the filename, no extension
+    notify_send_wrapper "" "$FILENAME_WITHOUT_EXTENSION" "Success"
 }
 
 # Function to start the background loop
 start_refresh_loop() {
-    kill_refresh_loop  # Ensure that the existing loop is stopped before starting
-    while true; do
-        sleep "$REFRESH_TIME"
-        next_glsl
-    done &
-    REFRESH_LOOP_PID=$!
-    echo "$REFRESH_LOOP_PID" > "$PID_DIR/refresh_loop.pid"
+		kill_refresh_loop  # Ensure that the existing loop is stopped before starting
+		while true; do
+				sleep "$REFRESH_TIME"
+				next_glsl
+		done &
+		REFRESH_LOOP_PID=$!
+		echo "$REFRESH_LOOP_PID" > "$PID_DIR/refresh_loop.pid"
 }
 
 # Kill the current instance of glpaper
 kill_glpaper() {
-    if [ -f "$PID_DIR/glpaper.pid" ]; then
-        GLPAPER_PID=$(<"$PID_DIR/glpaper.pid")
-        if kill -0 "$GLPAPER_PID" 2>/dev/null; then
-            kill "$GLPAPER_PID" && wait "$GLPAPER_PID" 2>/dev/null
-            rm "$PID_DIR/glpaper.pid"
-            notify_send_wrapper "Stopping" "GLpaper has been stopped."
-        else
-            notify_send_wrapper "Not found" "GLpaper is not running."
-        fi
-    fi
+		if [ -f "$PID_DIR/glpaper.pid" ]; then
+				GLPAPER_PID=$(<"$PID_DIR/glpaper.pid")
+				if kill -0 "$GLPAPER_PID" 2>/dev/null; then
+						kill "$GLPAPER_PID" && wait "$GLPAPER_PID" 2>/dev/null
+						rm "$PID_DIR/glpaper.pid"
+						notify_send_wrapper "Stopping" "GLpaper has been stopped." "Notice"
+				else
+						notify_send_wrapper "Not found" "GLpaper is not running." "Error"
+				fi
+		fi
 }
 
 # Kill the refresh loop if it exists
 kill_refresh_loop() {
-    if [ -f "$PID_DIR/refresh_loop.pid" ]; then
-        REFRESH_LOOP_PID=$(<"$PID_DIR/refresh_loop.pid")
-        if kill -0 "$REFRESH_LOOP_PID" 2>/dev/null; then
-            kill "$REFRESH_LOOP_PID" && wait "$REFRESH_LOOP_PID" 2>/dev/null
-            rm "$PID_DIR/refresh_loop.pid"
-            notify_send_wrapper "Stopping" "The GLpaper refresh loop has been stopped."
-        fi
-    fi
+		if [ -f "$PID_DIR/refresh_loop.pid" ]; then
+				REFRESH_LOOP_PID=$(<"$PID_DIR/refresh_loop.pid")
+				if kill -0 "$REFRESH_LOOP_PID" 2>/dev/null; then
+						kill "$REFRESH_LOOP_PID" && wait "$REFRESH_LOOP_PID" 2>/dev/null
+						rm "$PID_DIR/refresh_loop.pid"
+						if $DEBUG; then
+							 notify_send_wrapper "Stopping" "The GLpaper refresh loop has been stopped." "Notice"
+						fi
+					 
+				fi
+		fi
 }
 
 # Increment the index and loop if necessary
 next_glsl() {
-    kill_glpaper
-    CURRENT_INDEX=$(( (CURRENT_INDEX+1) % ${#GLSL_FILES[@]} ))
-    echo "$CURRENT_INDEX" > "$INDEX_FILE"
-    start_glpaper && notify_send_wrapper "Change" "Switching to the next GLSL."
+		kill_glpaper
+		CURRENT_INDEX=$(( (CURRENT_INDEX+1) % ${#GLSL_FILES[@]} ))
+		echo "$CURRENT_INDEX" > "$INDEX_FILE"
+		start_glpaper
+
+		# Check if DEBUG is set to true
+		if [ "$DEBUG" = "true" ]; then
+				# Call notify_send_wrapper only if DEBUG is true
+				notify_send_wrapper "Change" "Switching to the next GLSL." "Success"
+		fi
 }
 
 # Decrement the index and loop if necessary
 prev_glsl() {
-    kill_glpaper
-    if [ "$CURRENT_INDEX" -eq 0 ]; then
-        CURRENT_INDEX=$(( ${#GLSL_FILES[@]} - 1 ))
-    else
-        CURRENT_INDEX=$((CURRENT_INDEX-1))
-    fi
-    echo "$CURRENT_INDEX" > "$INDEX_FILE"
-    start_glpaper && notify_send_wrapper "Change" "Returning to the previous GLSL."
+		kill_glpaper
+		if [ "$CURRENT_INDEX" -eq 0 ]; then
+				CURRENT_INDEX=$(( ${#GLSL_FILES[@]} - 1 ))
+		else
+				CURRENT_INDEX=$((CURRENT_INDEX-1))
+		fi
+		echo "$CURRENT_INDEX" > "$INDEX_FILE"
+		start_glpaper
+
+		# Check if DEBUG is set to true
+		if [ "$DEBUG" = "true" ]; then
+				# Call notify_send_wrapper only if DEBUG is true
+				notify_send_wrapper "Change" "Switching to the next GLSL." "Notice"
+		fi
 }
 
 # Your bgDaemon script can then be used as follows:
 case "$1" in
-    start)
-        start_glpaper
-        start_refresh_loop
-        ;;
-    stop)
-        kill_glpaper
-        kill_refresh_loop
-        ;;
-    next)
-        next_glsl
-        ;;
-    prev)
-        prev_glsl
-        ;;
-    *)
-        echo "Unknown command: $1"
-        echo "Usage: $0 {start|stop|next|prev}"
-        #exit 1
-        ;;
+		start)
+				start_glpaper
+				start_refresh_loop
+				;;
+		stop)
+				kill_glpaper
+				kill_refresh_loop
+				;;
+		next)
+				next_glsl
+				;;
+		prev)
+				prev_glsl
+				;;
+		*)
+				echo "Unknown command: $1"
+				echo "Usage: $0 {start|stop|next|prev}"
+				#exit 1
+				;;
 esac
 
 exit 0
