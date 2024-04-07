@@ -9,7 +9,7 @@ declare -A workspace_mappings=(
     [2]='brave'
     [3]='evolution'
     [4]='AndroidMessages element-desktop whatsapp-for-linux telegram-desktop'
-    [5]='code-oss brave'
+    [5]='code brave'
     [6]='thunar QMPlay2'
     [7]='deluge'
 )
