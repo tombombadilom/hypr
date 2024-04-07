@@ -1,30 +1,38 @@
 #!/bin/bash
 
+# Function to retrieve the window ID for an application
+# Replace the implementation with one that works for Hyprland
+get_window_id() {
+    # Implementation goes here; the method will depend on Hyprland
+    echo "Placeholder for window ID"
+}
+
 # Define your workspace and application arrays here (as an example)
-declare -a workspaces=(1 2 3 4 5 6)
-declare -a apps=('foot' 'brave' 'evolution' 'android-messages element-desktop whatsapp-for-linux telegram-desktop' 'code-oss brave' 'thunar QMPlay2' 'deluge')
+declare -a workspace_mapping=(
+    '1 foot'
+    '2 brave'
+    '3 evolution'
+    '4 android-messages element-desktop whatsapp-for-linux telegram-desktop'
+    '5 code-oss brave'
+    '5 foot'
+    '6 thunar QMPlay2'
+    '7 deluge'
+)
 
 # Adjustable wait time in seconds (modify this value)
 wait_time=5
 
-# Function to get window ID for an application (you will need to implement this)
-get_window_id() {
-    # Your code to retrieve the window ID goes here
-    echo "Placeholder for window ID"
-}
+# Move to the first workspace to avoid opening everything in the same workspace
+hyprctl workspace 1
 
-# Loop through each workspace and launch the associated apps
-for i in "${!workspaces[@]}"; do
-  # Get current workspace number and application(s)
-  workspace=${workspaces[$i]}
-  applications=${apps[$i]}
+# Launch applications and place them in the right workspace
+for entry in "${workspace_mapping[@]}"; do
+    # Split the entry into workspace and app
+    read -r workspace app <<< "$entry"
 
-  # Wait for the specified time before launching applications
-  sleep "$wait_time"
+    # Wait before launching the application
+    sleep "$wait_time"
 
-  # Split the applications string by spaces and loop through each application
-  IFS=' ' read -r -a arr <<< "$applications"
-  for app in "${arr[@]}"; do
     # Launch the application in the background
     $app &
 
@@ -36,13 +44,10 @@ for i in "${!workspaces[@]}"; do
     window_id=$(get_window_id "$app")
 
     # Use the window ID to move the window to the specified workspace
+    # The exact command will differ based on your setup and available tools
+    # Example: hyprctl move window-to-workspace or similar
     hyprctl send "$window_id" "$workspace"
-  done
   
-  # It may be necessary to add a small delay here if the window manager needs more time
-  # to spawn the application in the correct workspace
-  sleep 1
+    # It may be necessary to add a small delay here if the window manager needs more time
+    sleep 1
 done
-
-# Unsetting IFS to its default value
-unset IFS
