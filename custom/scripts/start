@@ -8,10 +8,10 @@ declare -A workspace_mappings=(
     [1]='foot'
     [2]='brave'
     [3]='evolution'
-    [4]='Android Messages Element Desktop WhatsApp for Linux Telegram Desktop'
+    [4]='AndroidMessages element-desktop whatsapp-for-linux telegram-desktop'
     [5]='code-oss brave'
-    [6]='Thunar QMPlay2'
-    [7]='Deluge'
+    [6]='thunar QMPlay2'
+    [7]='deluge'
 )
 
 # Function to get the X11 window ID of the last focused window
