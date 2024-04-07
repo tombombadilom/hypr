@@ -1,53 +1,55 @@
 #!/bin/bash
 
-# Function to retrieve the window ID for an application
-# Replace the implementation with one that works for Hyprland
-get_window_id() {
-    # Implementation goes here; the method will depend on Hyprland
-    echo "Placeholder for window ID"
-}
-
-# Define your workspace and application arrays here (as an example)
-declare -a workspace_mapping=(
-    '1 foot'
-    '2 brave'
-    '3 evolution'
-    '4 android-messages element-desktop whatsapp-for-linux telegram-desktop'
-    '5 code-oss brave'
-    '5 foot'
-    '6 thunar QMPlay2'
-    '7 deluge'
-)
-
-# Adjustable wait time in seconds (modify this value)
+# Wait time before checking for new windows
 wait_time=5
 
-# Move to the first workspace to avoid opening everything in the same workspace
-hyprctl workspace 1
+# Define mappings from workspace number to expected window titles (as examples)
+declare -A workspace_mappings=(
+    [1]='foot'
+    [2]='brave'
+    [3]='evolution'
+    [4]='Android Messages Element Desktop WhatsApp for Linux Telegram Desktop'
+    [5]='Code - OSS brave'
+    [5b]='foot'
+    [6]='Thunar QMPlay2'
+    [7]='Deluge'
+)
 
-# Launch applications and place them in the right workspace
-for entry in "${workspace_mapping[@]}"; do
-    # Split the entry into workspace and app
-    read -r workspace app <<< "$entry"
+# Function to get the X11 window ID of the last focused window
+get_recent_window_id() {
+    # In this example, we're using xdotool to get the active window ID
+    echo $(xdotool getactivewindow 2>/dev/null)
+}
 
-    # Wait before launching the application
-    sleep "$wait_time"
-
-    # Launch the application in the background
-    $app &
-
-    # Capture the process ID of the last started background process
-    pid=$!
+# Function to move a window to a different workspace
+move_window_to_workspace() {
+    local window_id="$1"
+    local destination_workspace="$2"
     
-    # Wait for the application to open and get the window ID 
-    sleep 1
-    window_id=$(get_window_id "$app")
+    hyprctl dispatch move-to-workspace "$window_id" "$destination_workspace"
+}
 
-    # Use the window ID to move the window to the specified workspace
-    # The exact command will differ based on your setup and available tools
-    # Example: hyprctl move window-to-workspace or similar
-    hyprctl send "$window_id" "$workspace"
-  
-    # It may be necessary to add a small delay here if the window manager needs more time
-    sleep 1
+# Loop over workspace mappings and launch applications
+for workspace in "${!workspace_mappings[@]}"; do
+    applications=${workspace_mappings[$workspace]}
+    readarray -td' ' app_array <<<"$applications;"
+
+    # Iterate through each application assigned to the current workspace
+    for app_name in "${app_array[@]}"; do
+        if [ -n "$app_name" ]; then
+            # Launch the application
+            $app_name &
+
+            # Wait for the application to start
+            sleep "$wait_time"
+
+            # Get the window ID of the app that just started
+            window_id=$(get_recent_window_id)
+
+            # Move the window to its designated workspace
+            if [ -n "$window_id" ]; then
+                move_window_to_workspace "$window_id" "$workspace"
+            fi
+        fi
+    done
 done
