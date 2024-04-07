@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Define your workspace and application arrays here (as an example)
+declare -a workspaces=(1 2 3 4 5 6)
+declare -a apps=('foot' 'brave' 'evolution' 'android-messages element-desktop whatsapp-for-linux telegram-desktop' 'code-oss brave' 'thunar QMPlay2' 'deluge')
+
+# Adjustable wait time in seconds (modify this value)
+wait_time=5
+
+# Loop through each workspace and launch the associated apps
+for i in "${!workspaces[@]}"; do
+  # Get current workspace number and application(s)
+  workspace=${workspaces[$i]}
+  applications=${apps[$i]}
+
+  # Move to the specified workspace
+  hyprctl move-to-workspace "$workspace"
+
+  # Wait for the specified time before launching applications
+  sleep "$wait_time"
+
+  # Split the applications string by spaces and loop through each application
+  IFS=' ' read -r -a arr <<< "$applications"
+  for app in "${arr[@]}"; do
+    # Launch the application in the background
+    $app &
+  done
+  
+  # It may be necessary to add a small delay here if the window manager needs more time
+  # to spawn the application in the correct workspace
+  sleep 1
+done
+
+# Unsetting IFS to its default value
+unset IFS
