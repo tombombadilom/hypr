@@ -7,14 +7,17 @@ declare -a apps=('foot' 'brave' 'evolution' 'android-messages element-desktop wh
 # Adjustable wait time in seconds (modify this value)
 wait_time=5
 
+# Function to get window ID for an application (you will need to implement this)
+get_window_id() {
+    # Your code to retrieve the window ID goes here
+    echo "Placeholder for window ID"
+}
+
 # Loop through each workspace and launch the associated apps
 for i in "${!workspaces[@]}"; do
   # Get current workspace number and application(s)
   workspace=${workspaces[$i]}
   applications=${apps[$i]}
-
-  # Move to the specified workspace
-  hyprctl move-to-workspace "$workspace"
 
   # Wait for the specified time before launching applications
   sleep "$wait_time"
@@ -24,6 +27,16 @@ for i in "${!workspaces[@]}"; do
   for app in "${arr[@]}"; do
     # Launch the application in the background
     $app &
+
+    # Capture the process ID of the last started background process
+    pid=$!
+    
+    # Wait for the application to open and get the window ID 
+    sleep 1
+    window_id=$(get_window_id "$app")
+
+    # Use the window ID to move the window to the specified workspace
+    hyprctl send "$window_id" "$workspace"
   done
   
   # It may be necessary to add a small delay here if the window manager needs more time
