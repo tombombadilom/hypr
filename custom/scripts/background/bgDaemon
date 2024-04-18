@@ -138,7 +138,7 @@ kill_glpaper() {
 								fi
 						fi
 				else
-						notify_send_wrapper "Not found" "GLpaper is not running." "Error"
+						#notify_send_wrapper "Not found" "GLpaper is not running." "Error"
 				fi
 		fi
 }
