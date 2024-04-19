@@ -3,25 +3,45 @@
 # Nom du service à vérifier
 snd-notify() {
   local title="$1"
-  local message="$2"
-  local icon_name="${3:-alert}" # Utiliser 'alert' comme icône par défaut si aucun n'est fourni
-  local icon_path
+		local message="$2"
+		local notify_type="$3" # New parameter for the type of notification
+		local urgency="low"
+		local timeout=10000
+		local icon="" # Variable to store the path to the notification icon
 
-  # Chercher l'icône dans le fichier settings.ini et affecter le chemin complet à la variable icon_path
-  icon_path=$(grep -oP "(?<=^$icon_name=).*" "$HOME/.config/gtk-3.0/settings.ini")
-  notify-send "toto" "$icon_path"
-  # Si un chemin d'icône n'a pas été trouvé, utilisez l'icône par défaut
-  if [ -z "$icon_path" ]; then
-    icon_path="/usr/share/icons/${icon_name}.png" # Remplacez ceci par le chemin réel par défaut des icônes
-  fi
+		# Set icon and urgency based on the notification type
+		case "$notify_type" in
+				Alarm)
+						icon="dialog-error" # Replace with actual path to your alarm icon if needed
+						urgency="critical"
+						;;
+				Notice)
+						icon="dialog-information" # Replace with actual path to notice icon if needed
+						;;
+				Success)
+						icon="dialog-ok" # Replace with actual path to success icon if needed
+						;;
+				Error)
+						icon="dialog-error" # Replace with actual path to error icon if needed
+						urgency="critical"
+						;;
+				*)
+						icon="dialog-information" # Default icon
+						;;
+		esac
 
-  # Envoyer la notification avec notify-send en utilisant l'icône spécifiée
-  notify-send --icon="$icon_path" "$title" "$message"
+		# Adjust settings when debugging
+		if $DEBUG; then
+				urgency="normal"   # Increase urgency when debugging
+				timeout=20000      # Increase the time notifications are displayed when debugging
+		fi
+
+		if command -v notify-send &> /dev/null; then
+				notify-send -t "$timeout" -u "$urgency" -i "$icon" -h int:transient:1 "$title" "$message"
+		else
+				echo "$title: $message"
+		fi
 }
-
-# Appeler la fonction avec le titre et le message spécifiés
-snd-notify "Notice" "bip."
-
 
 SERVICE="bgDaemon"
 

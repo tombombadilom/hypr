@@ -1,30 +1,30 @@
 #!/bin/bash
 
 # Créez l'utilisateur 'glpaper' sans un répertoire home
-useradd -M glpaper || true  # Evite l'arrêt du script si l'utilisateur existe déjà
+sudo useradd -M glpaper || true  # Évite l'interruption du script si l'utilisateur existe déjà
 
 # Ajoutez l'utilisateur '$USER' au groupe 'video'
-usermod -aG video $USER
+sudo usermod -aG video $USER
+bg_daemon_script="bgDaemon"
+# Créez le répertoire glpaper pour les exécutables
+local_bin="$HOME/.local/bin"
+local_run="$HOME/.local/run"
 
-# créer le repertoire glpaper pour les exec
-local_bin="$HOME/.local/bin/glpaper"
-local_run="$HOME/.local/run/glpaper"
-bg_daemon_script="$HOME/.config/hypr/custom/scripts/background/bgDaemon"
-bg_daemon_service="/etc/systemd/system/bgDaemon.service"
-
-mkdir -p "$local_bin"
-mkdir -p "$local_run"
-cp "$bg_daemon_script" "$local_bin/."
+mkdir -p "$local_bin/glpaper"
+mkdir -p "$local_run/glpaper"
+cp "$bg_daemon_script" "$local_bin/glpaper/."
 
 # Changez la propriété et les permissions des répertoires
-chown -R $USER:video "$local_bin"
-chown -R $USER:video "$local_run"
-chmod -R 777 "$local_bin" # À noter que donner la permission 777 à des répertoires peut être une pratique peu sûre
-chmod -R 777 "$local_run" 
-chmod +wx "$local_bin/bgDaemon" # Il suffit généralement d'autoriser l'écriture et l'exécution plutôt que toutes les permissions
+chown -R $USER:video "$local_bin/glpaper"
+chown -R $USER:video "$local_run/glpaper"
+chmod -R 750 "$local_bin/glpaper"
+chmod -R 750 "$local_run/glpaper"
 
 # Installez le daemon et service dans systemd
-sudo cp "$bg_daemon_script" "$bg_daemon_service"
+sudo cp bgDaemon.service /etc/systemd/system/
+echo $$ > "$local_run/glpaper/bgDaemon.pid"
 
 # Activez les daemons
-sudo systemctl enable bgDaemon.service && sudo systemctl start bgDaemon.service
+sudo systemctl daemon-reload
+sudo systemctl enable bgDaemon.service
+sudo systemctl start bgDaemon.service

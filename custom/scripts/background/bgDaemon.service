@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=tom
+User=$USER
 Group=video
 ExecStart=/home/tom/.local/bin/glpaper/bgDaemon
 PIDFile=/home/tom/.local/run/glpaper/bgDaemon.pid
