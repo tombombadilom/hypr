@@ -1,4 +1,46 @@
 #!/bin/bash
+# check if the daemon is installed and alive 
+# Nom du service à vérifier
+snd-notify() {
+  local title="$1"
+  local message="$2"
+  local icon_name="${3:-alert}" # Utiliser 'alert' comme icône par défaut si aucun n'est fourni
+  local icon_path
+
+  # Chercher l'icône dans le fichier settings.ini et affecter le chemin complet à la variable icon_path
+  icon_path=$(grep -oP "(?<=^$icon_name=).*" "$HOME/.config/gtk-3.0/settings.ini")
+  notify-send "toto" "$icon_path"
+  # Si un chemin d'icône n'a pas été trouvé, utilisez l'icône par défaut
+  if [ -z "$icon_path" ]; then
+    icon_path="/usr/share/icons/${icon_name}.png" # Remplacez ceci par le chemin réel par défaut des icônes
+  fi
+
+  # Envoyer la notification avec notify-send en utilisant l'icône spécifiée
+  notify-send --icon="$icon_path" "$title" "$message"
+}
+
+# Appeler la fonction avec le titre et le message spécifiés
+snd-notify "Notice" "bip."
+
+
+SERVICE="bgDaemon"
+
+# Vérifie si le service est installé
+if systemctl list-unit-files | grep -qw "$SERVICE"; then
+    #echo "Le service $SERVICE est installé."
+    # Vérifie si le daemon du service tourne
+    if systemctl is-active --quiet "$SERVICE"; then
+        #echo "Le daemon de $SERVICE est en cours d'exécution."
+    else
+        snd-notify "Le daemon de $SERVICE n'est pas en cours d'exécution."
+        # Commande pour démarrer le service si nécessaire ici
+        sudo systemctl start $SERVICE
+    fi
+else
+    snd-notify "Le service $SERVICE n'est pas installé."
+    cd ~/.config/hypr/custom/scripts/background
+    ./install
+fi
 
 # Chemin vers le script bgDaemon
 BGDAEMON_PATH=~/.local/bin/glpaper/bgDaemon
