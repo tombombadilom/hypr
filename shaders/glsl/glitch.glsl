@@ -8,8 +8,8 @@ uniform vec2 mouse;
 
 uniform sampler2D backbuffer;
 
-vec2 u_resolution = resolution;
-float u_time = time;
+//vec2 u_resolution = resolution;
+//float time = time;
 //vec2 mouse = u_mouse;//vec2(0.6,0.45);//u_mouse/u_resolution;
 vec3 position = vec3(7.,-10.,10.);//vec3(-7.,-8.,2);
 
@@ -28,7 +28,7 @@ const bool ENABLE_AMBIENT_OCCLUSION = false;
 const bool ENABLE_DAMN_PYRAMID = true;
 const bool ENABLE_DUST = true;
 float VCJDECLIPSESIZE = 2.0001;
-vec3 LIGHT_DIR = normalize(vec3(0.,5.09,-0.01)); // sin(u_time*0.25)+(1.-.34873)
+vec3 LIGHT_DIR = normalize(vec3(0.,5.09,-0.01)); // sin(time*0.25)+(1.-.34873)
 vec3 AMBIENT = vec3(0.05,0.08,0.1);//vec3(0.392,0.632,1.000);
 
 float random(vec2 p){
@@ -36,7 +36,7 @@ float random(vec2 p){
 }
 
 float noise(vec2 uv, vec2 seed){
-	uv += seed + u_time/200000.;
+	uv += seed + time/200000.;
 	vec2 id = floor(uv*10.);
 	vec2 lc = smoothstep(0.,1.,fract(uv*10.));
 
@@ -166,7 +166,7 @@ vec2 fractalizer(vec2 p){
 float collision_map(vec3 p)
 {
 	/*const float time_loop = 100.;
-	float fract_time = fract(u_time / time_loop) * time_loop;
+	float fract_time = fract(time / time_loop) * time_loop;
 	float inverse_fract_time = time_loop - fract_time;
 	float relative_time = fract_time / time_loop;
 	
@@ -175,9 +175,9 @@ float collision_map(vec3 p)
 	combined_z -= length(0.5*cos(p.yx*0.04 + fract_time*0.25)) * relative_time + (1. - relative_time) * length(0.5*cos(p.yx*0.04 + inverse_fract_time*0.25));
 	combined_z -= length(cos(p.z*0.07 + fract_time*0.25)) * relative_time + (1. - relative_time) * length(cos(p.z*0.07 + inverse_fract_time*0.25));
 	*/
-	float combined_z = length(sin(p.xy*0.02 + u_time*0.25));
-	combined_z -= length(0.5*cos(p.yx*0.04 + u_time*0.25));
-	combined_z -= length(cos(p.z*0.07 + u_time*0.25));
+	float combined_z = length(sin(p.xy*0.02 + time*0.25));
+	combined_z -= length(0.5*cos(p.yx*0.04 + time*0.25));
+	combined_z -= length(cos(p.z*0.07 + time*0.25));
 	
 	p.z -= combined_z;
 	float plane = sdPlane(p, vec4(0,0,1,0));
@@ -387,10 +387,10 @@ vec3 sky_color_in_direction(vec3 p){
 		float residual_sun_aligment = (SUN_SIZE - aligment_angle) * VCJDECLIPSESIZE;
 		
 		float angle = trueAngle(dirdiff.x, -dirdiff.z);
-		float puff = octaves(vec2(residual_sun_aligment*6., angle*3.), vec2(u_time, 0.)*0.2, 4);
-		puff *= octaves(vec2(residual_sun_aligment*9. + angle*1., angle/3.), vec2(12.*u_time, -u_time * 2.)*0.02, 7);
-		puff *= octaves(vec2(-residual_sun_aligment*9. - angle*2., angle/4.), vec2(11.*u_time, -u_time * 1.7)*0.015, 4);
-		puff *= octaves(vec2(-residual_sun_aligment*7. + angle*1., angle/2.), vec2(7.*u_time, -u_time * 1.9)*0.032, 4);
+		float puff = octaves(vec2(residual_sun_aligment*6., angle*3.), vec2(time, 0.)*0.2, 4);
+		puff *= octaves(vec2(residual_sun_aligment*9. + angle*1., angle/3.), vec2(12.*time, -time * 2.)*0.02, 7);
+		puff *= octaves(vec2(-residual_sun_aligment*9. - angle*2., angle/4.), vec2(11.*time, -time * 1.7)*0.015, 4);
+		puff *= octaves(vec2(-residual_sun_aligment*7. + angle*1., angle/2.), vec2(7.*time, -time * 1.9)*0.032, 4);
 		puff = pow(puff, 2.) * 5.25;
 		
 		if(VCJDECLIPSESIZE <= 1.)
@@ -412,7 +412,7 @@ vec3 sky_color_in_direction(vec3 p){
 		const float p_z_cutoff = 0.10269;
 		const float thickness = 7.;
 		const float fadeout_flicker_time = 1e10;
-		float fadeout_time = fadeout_flicker_time / (u_time + fadeout_flicker_time);
+		float fadeout_time = fadeout_flicker_time / (time + fadeout_flicker_time);
 		
 		float outtershell = 
 			clamp(-abs(dirdiff.z - dirdiff.y + 0.7 * dirdiff.x + pyrasize)*thickness + 0.005, 0., 0.03) +
@@ -423,8 +423,8 @@ vec3 sky_color_in_direction(vec3 p){
 		if(SUN_SIZE < 0.)
 		{
 			float flicker = 
-				abs(sin(u_time * 7.88) + cos(u_time * 11.44) - sin(u_time * 5.31)) * 
-				fadeout_time + u_time / (u_time + fadeout_flicker_time);
+				abs(sin(time * 7.88) + cos(time * 11.44) - sin(time * 5.31)) * 
+				fadeout_time + time / (time + fadeout_flicker_time);
 			float flare_v = clamp(-abs(dirdiff.x)*0.8 + 0.005, 0., 0.09) * 200. * flicker;
 			float flare_h = 5.0 * flicker / abs((height - p_z_cutoff)*19.3 + EPSI) * clamp(-pow(dirdiff.x, 2.)*(3. - flicker)*97. + 0.01, 0., 1.);
 			
@@ -456,22 +456,22 @@ vec3 sky_color_in_direction(vec3 p){
 		float accurateProjectedHight = tan(p.z * PI_C / 2. - EPSI) / (PI_C / 2.);
 		float angle = trueAngle(p.x, p.y);
 		float height1 = accurateProjectedHight / 0.1 - 1.5 + 
-			sin(27. * angle + u_time * 0.25) * 0.1 + 
-			cos(angle * 21. - u_time * 0.34) * 0.07;
-		float puff = octaves(vec2(height1/9., angle*3.), vec2(u_time, 0.)*0.2, 4) /
+			sin(27. * angle + time * 0.25) * 0.1 + 
+			cos(angle * 21. - time * 0.34) * 0.07;
+		float puff = octaves(vec2(height1/9., angle*3.), vec2(time, 0.)*0.2, 4) /
 			max(abs(height1) + 0.5, 0.) * 0.3;
 		
 		float height2 = accurateProjectedHight / 0.07 - 1.7;
 		float height4 =  accurateProjectedHight / 0.2 - 5.5 + 
-			sin(19. * angle + u_time * 0.55) * 0.31 + 
-			cos(angle * 34. - u_time * 0.74) * 0.17;		
+			sin(19. * angle + time * 0.55) * 0.31 + 
+			cos(angle * 34. - time * 0.74) * 0.17;		
 		float height3 = (height1 + height2 + height4) * 0.5 + 0.18; 
 				
-		puff += octaves(vec2(height2/2. + angle/9., angle*3.), vec2(12.*u_time, -u_time * 2.)*0.02, 7) / max(abs(height2) + 0.5, 0.) * 0.5;
-		puff += octaves(vec2(-height3/3. - angle/8., angle*4.), vec2(11.*u_time, -u_time * 1.7)*0.015, 4) / max(abs(height2) + 0.5, 0.) * 0.5 ;
-		puff *= octaves(vec2(-height4/8. + angle*4., angle*2.), vec2(7.*u_time, -u_time * 1.9)*0.032, 4) / max(abs(height4)*0.5 + 0.9, 0.) * 2.5;
+		puff += octaves(vec2(height2/2. + angle/9., angle*3.), vec2(12.*time, -time * 2.)*0.02, 7) / max(abs(height2) + 0.5, 0.) * 0.5;
+		puff += octaves(vec2(-height3/3. - angle/8., angle*4.), vec2(11.*time, -time * 1.7)*0.015, 4) / max(abs(height2) + 0.5, 0.) * 0.5 ;
+		puff *= octaves(vec2(-height4/8. + angle*4., angle*2.), vec2(7.*time, -time * 1.9)*0.032, 4) / max(abs(height4)*0.5 + 0.9, 0.) * 2.5;
 		
-		puff += octaves(vec2(height2 + angle * 2.1, angle * 1.3)*0.2, vec2(0.02*u_time,0.), 4) * 1.7;
+		puff += octaves(vec2(height2 + angle * 2.1, angle * 1.3)*0.2, vec2(0.02*time,0.), 4) * 1.7;
 
 		puff = pow(abs(puff), 1.95) * 0.25 * (clamp(-pow(height3, 2.) + 4.5, 0., 1.) + clamp(abs(height4 - 2.) + 0.5, 0., 1.));
 		puff *= max(accurateProjectedHight / (0.1 + accurateProjectedHight) * (0.1) / (0.1 + accurateProjectedHight) / 0.25, 0.);
@@ -578,7 +578,7 @@ vec4 reflected_raymarching(vec3 start_position, vec3 direction){
 
 void _mainImage(out vec4 fragColor, in vec2 fragCoord )
 {
-	vec2 uv = (fragCoord-0.5*u_resolution.xy)/u_resolution.x * ZOOM; 
+	vec2 uv = (fragCoord-0.5*resolution.xy)/resolution.x * ZOOM;
 	vec3 start_position = position;
 	vec3 direction = normalize(vec3(uv.x,1.,uv.y)); 
 	direction = rotateY(direction, -2.*PI_C*(mouse.y - 0.5));
@@ -589,39 +589,41 @@ void _mainImage(out vec4 fragColor, in vec2 fragCoord )
 
 vec4 postprocess(vec4 localColor, vec2 fragCoord)
 {
-	vec2 position = ( fragCoord / u_resolution.xy );
-	vec2 pixel = 1./u_resolution;
-	
-	if(ENABLE_DUST)
-	{
-		float dust1 = pow(octaves(vec2(-u_time*0.009) + (position)*1.5, vec2((-u_time*0.15)), 4), 0.3)*0.1;
-		float dust2 = pow(octaves(
-			vec2(-u_time*0.07, u_time*0.02) + 
-				vec2(position.x * 0.6, position.y * 0.7),
-			vec2(-u_time*0.19, u_time*0.1),
-			4), 0.3)*0.2;
-		float dust3 = pow(octaves(
-			vec2(u_time*0.09, -u_time*0.03) + 
-				vec2(position.x * 0.4, -position.y * 0.5),
-			vec2(-u_time*0.17, u_time*0.12),
-			12), 0.3)*0.1;
-		
-		float dust = dust1 + dust2;
-		localColor = max(localColor - 
-				 vec4(dust1,dust1,dust1,0.) +
-				 vec4(dust2,dust2,dust2,0.) -
-				 vec4(dust3,dust3,dust3,0.),
-			0.);
-	}
-	
-	return localColor;
+    vec2 position = ( fragCoord / resolution.xy );
+    // Replace u_resolution with resolution in pixel calculation
+    vec2 pixel = 1./resolution;
+    
+    if(ENABLE_DUST)
+    {
+        float dust1 = pow(octaves(vec2(-time*0.009) + (position)*1.5, vec2((-time*0.15)), 4), 0.3)*0.1;
+        float dust2 = pow(octaves(
+            vec2(-time*0.07, time*0.02) + 
+                vec2(position.x * 0.6, position.y * 0.7),
+            vec2(-time*0.19, time*0.1),
+            4), 0.3)*0.2;
+        float dust3 = pow(octaves(
+            vec2(time*0.09, -time*0.03) + 
+                vec2(position.x * 0.4, -position.y * 0.5),
+            vec2(-time*0.17, time*0.12),
+            12), 0.3)*0.1;
+        
+        float dust = dust1 + dust2;
+        localColor = max(localColor - 
+                 vec4(dust1,dust1,dust1,0.) +
+                 vec4(dust2,dust2,dust2,0.) -
+                 vec4(dust3,dust3,dust3,0.),
+            0.);
+    }
+    
+    return localColor;
 }
 
 void main(void) {
-	AMBIENT=get_current_ambient();
-	vec4 outputVec;
-	vec2 fragCoord = gl_FragCoord.xy;
-	_mainImage(outputVec, fragCoord);
-	outputVec = postprocess(outputVec, fragCoord);
-	gl_FragColor = outputVec;
+    // Directly use the `time` and `resolution` uniforms in your logic.
+    AMBIENT=get_current_ambient();
+    vec4 outputVec;
+    vec2 fragCoord = gl_FragCoord.xy;
+    _mainImage(outputVec, fragCoord);
+    outputVec = postprocess(outputVec, fragCoord);
+    gl_FragColor = outputVec;
 }

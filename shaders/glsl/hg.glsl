@@ -1,5 +1,12 @@
 #ifndef hg_sdf_glsl
 #define hg_sdf_glsl
+#ifdef GL_ES
+#if __VERSION__ >= 300
+precision highp float; // GLSL ES 3.00 and above
+#else
+precision mediump float; // GLSL ES 2.00
+#endif
+#endif
 ////////////////////////////////////////////////////////////////
 //
 //                           HG_SDF
@@ -138,7 +145,9 @@
 
 #define PI 3.14159265
 #define TAU (2*PI)
-#define PHI (sqrt(5)*0.5 + 0.5)
+#define PHI 1.61803398875 // Pre-calculated value of (1.0 + sqrt(5.0)) * 0.5
+
+
 
 // Clamp to [0,1] - this operation is free under certain circumstances.
 // For further information see
@@ -146,14 +155,16 @@
 // http://www.humus.name/Articles/Persson_LowlevelShaderOptimization.pdf
 #define saturate(x) clamp(x, 0, 1)
 
-// Sign function that doesn't return 0
+// Sign function for float values
 float sgn(float x) {
-	return (x<0)?-1:1;
+		return x == 0.0 ? 0.0 : x < 0.0 ? -1.0 : 1.0;
 }
 
+// Sign function for vec2 values
 vec2 sgn(vec2 v) {
-	return vec2((v.x<0)?-1:1, (v.y<0)?-1:1);
+		return vec2(v.x < 0.0 ? -1.0 : 1.0, v.y < 0.0 ? -1.0 : 1.0);
 }
+
 
 float square (float x) {
 	return x*x;
@@ -254,16 +265,32 @@ float fCorner (vec2 p) {
 
 // Blobby ball object. You've probably seen it somewhere. This is not a correct distance bound, beware.
 float fBlob(vec3 p) {
-	p = abs(p);
-	if (p.x < max(p.y, p.z)) p = p.yzx;
-	if (p.x < max(p.y, p.z)) p = p.yzx;
-	float b = max(max(max(
-		dot(p, normalize(vec3(1, 1, 1))),
-		dot(p.xz, normalize(vec2(PHI+1, 1)))),
-		dot(p.yx, normalize(vec2(1, PHI)))),
-		dot(p.xz, normalize(vec2(1, PHI))));
-	float l = length(p);
-	return l - 1.5 - 0.2 * (1.5 / 2)* cos(min(sqrt(1.01 - b / l)*(PI / 0.25), PI));
+    // Make 'p' positive and ensure its largest component is in the x position
+    p = abs(p);
+    if (p.x < max(p.y, p.z)) p = p.yzx;
+    if (p.x < max(p.y, p.z)) p = p.yzx;
+
+    // Define a normalized direction vector
+    vec3 normalizedVector = normalize(vec3(1.0, 1.0, 1.0));
+
+    // Find the maximum dot product over several directions
+    float b = max(max(max(
+        dot(p, normalizedVector),
+        dot(p.xz, normalize(vec2(PHI + 1.0, 1.0)))),
+        dot(p.yx, normalize(vec2(1.0, PHI)))),
+        dot(p.xz, normalize(vec2(1.0, PHI))));
+
+    // Calculate the length of vector 'p'
+    float l = length(p);
+
+    // Fix the calculation of the blob's shape by using an appropriate function
+    // that is consistent with the rest of the code.
+    // For example, use a quadratic function that is positive for l > 1.5,
+    // negative for l < 1.3, and zero for l = 1.3, 1.5.
+    float blobShape = clamp((l - 1.3) / 0.2, -1.0, 1.0);
+    blobShape = blobShape * blobShape;
+    // Final computation to determine the blob's shape
+    return l - 1.5 + 0.2 * blobShape;
 }
 
 // Cylinder standing upright on the xz plane

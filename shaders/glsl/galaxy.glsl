@@ -1,10 +1,10 @@
-
 #define zoom 0.900
-#define tile   0.850
-#define speed2  0.0 #ifdef GL_ES
+#define tile 0.850
+#define speed2 0.0
+
+#ifdef GL_ES
 precision highp float;
 #endif
- 
  
 uniform float time;
 uniform vec2 resolution;
@@ -21,34 +21,30 @@ uniform vec2 resolution;
 #define distfading 0.560
 #define saturation 0.800
 
-
 #define transverseSpeed zoom*2.0
 #define cloud 0.11 
-
  
 float triangle(float x, float a) { 
-	float output2 = 2.0*abs(  2.0*  ( (x/a) - floor( (x/a) + 0.5) ) ) - 1.0;
-	return output2;
+    float output2 = 2.0 * abs(2.0 * ((x/a) - floor((x/a) + 0.5))) - 1.0;
+    return output2;
 }
  
 float field(in vec3 p) {	
-	float strength = 7. + .03 * log(1.e-6 + fract(sin(time) * 4373.11));
-	float accum = 0.;
-	float prev = 0.;
-	float tw = 0.;	
+    float strength = 7. + .03 * log(1.e-6 + fract(sin(time) * 4373.11));
+    float accum = 0.;
+    float prev = 0.;
+    float tw = 0.;	
 
-	//for (int i = 0; i < 1; ++i) {
-		float mag = dot(p, p);
-		p = abs(p) / mag + vec3(-.5, -.8 + 0.1*sin(time*0.7 + 2.0), -1.1+0.3*cos(time*0.3));
-		float w = exp(-float(0) / 7.);
-		accum += w * exp(-strength * pow(abs(mag - prev), 2.3));
-		tw += w;
-		prev = mag;
-	//}
-	return max(0., 5. * accum / tw - .7);
+    // Replace or uncomment the for-loop as intended in your logic
+    float mag = dot(p, p);
+    p = abs(p) / mag + vec3(-.5, -.8 + 0.1*sin(time*0.7 + 2.0), -1.1+0.3*cos(time*0.3));
+    float w = exp(-float(0) / 7.);
+    accum += w * exp(-strength * pow(abs(mag - prev), 2.3));
+    tw += w;
+    prev = mag;
+
+    return max(0., 5. * accum / tw - .7);
 }
-
-
 
 void main() {   
      	vec2 uv2 = 2. * gl_FragCoord.xy / vec2(512) - 1.;
