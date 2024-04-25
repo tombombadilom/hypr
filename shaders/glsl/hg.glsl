@@ -153,7 +153,7 @@ precision mediump float; // GLSL ES 2.00
 // For further information see
 // http://www.humus.name/Articles/Persson_LowLevelThinking.pdf and
 // http://www.humus.name/Articles/Persson_LowlevelShaderOptimization.pdf
-#define saturate(x) clamp(x, 0, 1)
+#define saturate(x) clamp(x, 0.0, 1.0)
 
 // Sign function for float values
 float sgn(float x) {
