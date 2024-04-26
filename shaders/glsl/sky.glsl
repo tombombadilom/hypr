@@ -1,33 +1,10 @@
-#ifdef GL_ES
+#version 320 es
 precision highp float;
-#endif
 
-
-#extension GL_OES_standard_derivatives : enable
-
-#define NUM_OCTAVES 6
+const int NUM_OCTAVES = 6;
 
 uniform float time;
 uniform vec2 resolution;
-
-mat3 rotX(float a) {
-    float c = cos(a);
-    float s = sin(a);
-    return mat3(
-    1, 0, 0,
-    0, c, -s,
-    0, s, c
-    );
-}
-mat3 rotY(float a) {
-    float c = cos(a);
-    float s = sin(a);
-    return mat3(
-    c, 0, -s,
-    0, 1, 0,
-    s, 0, c
-    );
-}
 
 float random(vec2 pos) {
     return fract(sin(dot(pos.xy, vec2(13.9898, 78.233))) * 43758.5453123);
@@ -36,7 +13,7 @@ float random(vec2 pos) {
 float noise(vec2 pos) {
     vec2 i = floor(pos);
     vec2 f = fract(pos);
-    float a = random(i + vec2(0.0, 0.0));
+    float a = random(i);
     float b = random(i + vec2(1.0, 0.0));
     float c = random(i + vec2(0.0, 1.0));
     float d = random(i + vec2(1.0, 1.0));
@@ -59,6 +36,8 @@ float fbm(vec2 pos) {
     return v;
 }
 
+out vec4 fragColor;
+
 void main(void) {
     vec2 p = (gl_FragCoord.xy * 3.0 - resolution.xy) / min(resolution.x, resolution.y);
     p -= vec2(12.0, 0.0);
@@ -77,22 +56,18 @@ void main(void) {
     vec3 color = mix(
     vec3(1.0, 1.0, 2.0),
     vec3(1.0, 1.0, 1.0),
-    //vec3(10.90, 0.2, 0.1),
-    //vec3(10.50, 0.07, 0.07),
     clamp((f * f) * 5.5, 1.2, 15.5)
     );
 
     color = mix(
     color,
     vec3(1.0, 1.0, 1.0),
-    //vec3(0.4, 0.1, 0.0),
     clamp(length(q), 2.0, 2.0)
     );
 
 
     color = mix(
     color,
-    //vec3(0.0, 1.0, 0.0),
     vec3(0.3, 0.2, 1.0),
     clamp(length(r.x), 0.0, 5.0)
     );
@@ -101,6 +76,6 @@ void main(void) {
 
     vec2 uv = gl_FragCoord.xy / resolution.xy;
     float alpha = 50.0 - max(pow(100.0 * distance(uv.x, -1.0), 0.0), pow(2.0 * distance(uv.y, 0.5), 5.0));
-    gl_FragColor = vec4(color * 100.0, color.r);
-    gl_FragColor = vec4(color, alpha * color.r);
+    fragColor = vec4(color * 100.0, color.r);
+    fragColor.a = alpha * color.r;
 }

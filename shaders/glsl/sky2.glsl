@@ -1,9 +1,6 @@
-#ifdef GL_ES
+#version 320 es
 precision highp float;
-#endif
 
-
-#extension GL_OES_standard_derivatives : enable
 
 #define NUM_OCTAVES 6
 
@@ -59,6 +56,8 @@ float fbm(vec2 pos) {
     return v;
 }
 
+out vec4 fragColor;
+
 void main(void) {
     vec2 p = (gl_FragCoord.xy * 3.0 - resolution.xy) / min(resolution.x, resolution.y);
     p -= vec2(12.0, 0.0);
@@ -101,6 +100,6 @@ void main(void) {
 
     vec2 uv = gl_FragCoord.xy / resolution.xy;
     float alpha = 50.0 - max(pow(100.0 * distance(uv.x, -1.0), 0.0), pow(2.0 * distance(uv.y, 0.5), 5.0));
-    gl_FragColor = vec4(color * 100.0, color.r);
-    gl_FragColor = vec4(color, alpha * color.r);
+    fragColor = vec4(color * 100.0, color.r);
+    fragColor = vec4(color, alpha * color.r);
 }
