@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # Configuration de wofi
-CONFIG_FILE="$HOME/.config/wofi/config"
+SCRIPTS="$HOME/.config/hypr/custom/scripts"
+CONFIG_FILE="$SCRIPTS/glpaper.config"
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "Erreur : Le fichier de configuration wofi n'existe pas : $CONFIG_FILE"
     exit 1
@@ -21,7 +22,7 @@ while IFS= read -r -d $'\0'; do
 done < <(find "$DIRECTORY" -maxdepth 1 -type f -name "*.glsl" -print0)
 
 # Crée le menu avec wofi
-RESULT=$(printf '%s\n' "${FILES[@]}" | wofi --show dmenu --matching fuzzy --config "$CONFIG_FILE")
+RESULT=$(printf '%s\n' "${FILES[@]}" | wofi -G -w 4 -c "$CONFIG_FILE" --show dmenu --matching fuzzy --config )
 
 # Quitte si aucun élément n'a été sélectionné
 if [ -z "$RESULT" ]; then
@@ -37,4 +38,3 @@ fi
 if ! $APPLICATION "$VIDEOID" "$FULLPATH"; then
     echo "Erreur d'exécution : Le programme $APPLICATION a retourné une erreur"
 fi
-
