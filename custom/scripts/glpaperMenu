@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+# Configuration de wofi
+CONFIG_FILE="$HOME/.config/wofi/config"
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Erreur : Le fichier de configuration wofi n'existe pas : $CONFIG_FILE"
+    exit 1
+fi
+source "$CONFIG_FILE"
+
+# Définis le répertoire et l'application
+DIRECTORY="$HOME/.config/hypr/shaders/glsl"
+APPLICATION="glpaper" # Remplace par l'application de ton choix
+VIDEOID=$(xrandr | grep 'HDMI-A-1' | cut -d' ' -f1 | cut -d'+' -f1)
+
+# Récupère les fichiers du répertoire
+FILES=()
+while IFS= read -r -d $'\0'; do
+    FILENAME=$(basename "$REPLY")
+    FILES+=("$FILENAME")
+done < <(find "$DIRECTORY" -maxdepth 1 -type f -name "*.glsl" -print0)
+
+# Crée le menu avec wofi
+RESULT=$(printf '%s\n' "${FILES[@]}" | wofi --show dmenu --matching fuzzy --config "$CONFIG_FILE")
+
+# Quitte si aucun élément n'a été sélectionné
+if [ -z "$RESULT" ]; then
+    exit 1
+fi
+
+# Exécute la commande et si elle renvoie une erreur, utilise snd-notify pour notifier l'utilisateur
+FULLPATH="$DIRECTORY/$RESULT"
+if [ ! -f "$FULLPATH" ]; then
+    echo "Erreur : Le fichier '$FULLPATH' n'existe pas"
+    exit 1
+fi
+if ! $APPLICATION "$VIDEOID" "$FULLPATH"; then
+    echo "Erreur d'exécution : Le programme $APPLICATION a retourné une erreur"
+fi
+
