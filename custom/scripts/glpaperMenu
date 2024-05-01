@@ -1,28 +1,4 @@
 #!/usr/bin/env bash
-# check if mounch is installed , if not :
-# send-notify that you are installing it
-# check what os it is
-# and install it
-if ! command -v mounch &> /dev/null
-then
-    echo "Mounch n'est pas installé, installation en cours..."
-    case "$(cat /etc/os-release | grep ^ID= | cut -d= -f2)" in
-        arch)
-            sudo pacman -Sy --noconfirm mounch
-            ;;
-        fedora)
-            sudo dnf install -y mounch
-            ;;
-        ubuntu|debian)
-            sudo apt-get install -y mounch
-            ;;
-        *)
-            echo "Erreur : Le script n'est pas compatible avec votre système d'exploitation."
-            exit 1
-            ;;
-    esac
-fi
-
 
 # Configuration de wofi
 SCRIPTS="$HOME/.config/hypr/custom/scripts"
